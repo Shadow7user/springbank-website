@@ -38,33 +38,6 @@
   });
 
   /* ──────────────────────────────────────────────────────────
-     Home page stats loader
-  ────────────────────────────────────────────────────────── */
-  (function statsGrid() {
-    const grid = $('#statsGrid');
-    if (!grid) return;
-
-    fetch('/api/stats')
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => {
-        if (!d || !Array.isArray(d.stats) || d.stats.length === 0) return;
-        grid.innerHTML = d.stats
-          .map(
-            s =>
-              '<div class="stat"><div class="stat__number">' +
-              s.value +
-              '</div><div class="stat__label">' +
-              s.label +
-              '</div></div>',
-          )
-          .join('');
-      })
-      .catch(() => {
-        // Keep the static fallback values if the request fails.
-      });
-  })();
-
-  /* ──────────────────────────────────────────────────────────
      Newsletter signup
   ────────────────────────────────────────────────────────── */
   (function newsletterSignup() {

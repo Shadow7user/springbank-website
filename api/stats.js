@@ -12,6 +12,13 @@ let cache = null;
 let cacheTime = 0;
 const CACHE_TTL = 5 * 60 * 1000;
 
+function buildSystemStatus(database) {
+  return {
+    status: process.env.MAINTENANCE_MODE === 'true' ? 'maintenance' : 'operational',
+    database,
+  };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -21,7 +28,7 @@ module.exports = async function handler(req, res) {
 
   if (cache && Date.now() - cacheTime < CACHE_TTL) {
     res.setHeader('X-Cache', 'HIT');
-    return res.status(200).json({ stats: cache });
+    return res.status(200).json(cache);
   }
 
   try {
@@ -42,20 +49,35 @@ module.exports = async function handler(req, res) {
     `;
     const hasStatsTable = Array.isArray(tableCheck) && tableCheck[0]?.table_name;
     if (!hasStatsTable) {
-      return res.status(200).json({ stats: FALLBACK_STATS, source: 'fallback' });
+      const payload = {
+        stats: FALLBACK_STATS,
+        source: 'fallback',
+        system: buildSystemStatus('connected'),
+      };
+      cache = payload;
+      cacheTime = Date.now();
+      return res.status(200).json(payload);
     }
 
     const rows = await sql`
       SELECT key, label, value, icon, sort_order
       FROM stats WHERE active = true ORDER BY sort_order LIMIT 8
     `;
-    const stats = rows.length > 0 ? rows : FALLBACK_STATS;
-    cache = stats;
+    const payload = {
+      stats: rows.length > 0 ? rows : FALLBACK_STATS,
+      source: rows.length > 0 ? 'database' : 'fallback',
+      system: buildSystemStatus('connected'),
+    };
+    cache = payload;
     cacheTime = Date.now();
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-    return res.status(200).json({ stats });
+    return res.status(200).json(payload);
   } catch (err) {
     console.error('[/api/stats] error:', err.message);
-    return res.status(200).json({ stats: FALLBACK_STATS, source: 'fallback' });
+    return res.status(200).json({
+      stats: FALLBACK_STATS,
+      source: 'fallback',
+      system: buildSystemStatus('fallback'),
+    });
   }
 };
