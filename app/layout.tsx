@@ -22,77 +22,43 @@ const systemStatusStyle: React.CSSProperties = {
 };
 
 const statsScript = `
-(function () {
-  var grid = document.getElementById("statsGrid");
-  if (!grid) return;
-
-  fetch("/api/stats")
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
-      if (!d || !Array.isArray(d.stats) || d.stats.length === 0) return;
-      grid.innerHTML = d.stats.map(function (s) {
+(function() {
+  fetch('/api/stats')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!d || !d.stats || d.stats.length === 0) return;
+      var grid = document.getElementById('statsGrid');
+      if (!grid) return;
+      grid.innerHTML = d.stats.map(function(s) {
         return '<div class="stat"><div class="stat__number">' + s.value + '</div><div class="stat__label">' + s.label + '</div></div>';
-      }).join("");
+      }).join('');
     })
-    .catch(function () {
-      // Keep static fallback values in markup.
-    });
+    .catch(function() { /* keep static fallback */ });
 })();
 `;
 
 const statusWidgetScript = `
-(function () {
+(function() {
   var tapCount = 0;
-  var resetTimer = null;
-
-  function resolveStatusText(data) {
-    var status = data && data.system && data.system.status ? data.system.status : "unknown";
-    var database = data && data.system && data.system.database ? data.system.database : "unknown";
-
-    if (status === "maintenance") {
-      return "MAINTENANCE MODE | DB: " + database.toUpperCase();
+  var logo = document.querySelector('h1, .logo, [aria-label="Home"]');
+  if (!logo) return;
+  logo.addEventListener('click', function() {
+    tapCount++;
+    setTimeout(function() { tapCount = 0; }, 800);
+    if (tapCount === 3) {
+      var statusDiv = document.getElementById('sysStatus');
+      if (statusDiv) {
+        fetch('/api/stats')
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .then(function(data) {
+            var status = (data && data.system && data.system.status) ? data.system.status : 'unknown';
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = status === 'maintenance' ? '🔧 Maintenance mode' : '✅ All systems go';
+            setTimeout(function() { statusDiv.style.display = 'none'; }, 5000);
+          })
+          .catch(function() { statusDiv.innerHTML = '⚠️ Status unknown'; });
+      }
     }
-    if (status === "operational") {
-      return "ALL SYSTEMS GO | DB: " + database.toUpperCase();
-    }
-    return "SYSTEM STATUS UNKNOWN";
-  }
-
-  document.addEventListener("click", function (event) {
-    var target = event.target && event.target.closest
-      ? event.target.closest(".site-logo, .logo, h1, [aria-label=\\"Home\\"], [aria-label*=\\"Home\\"]")
-      : null;
-    if (!target) return;
-
-    tapCount += 1;
-    if (resetTimer) window.clearTimeout(resetTimer);
-    resetTimer = window.setTimeout(function () {
-      tapCount = 0;
-      resetTimer = null;
-    }, 800);
-
-    if (tapCount !== 3) return;
-    tapCount = 0;
-
-    var statusDiv = document.getElementById("sysStatus");
-    if (!statusDiv) return;
-
-    fetch("/api/stats")
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        statusDiv.textContent = resolveStatusText(data);
-        statusDiv.style.display = "block";
-        window.setTimeout(function () {
-          statusDiv.style.display = "none";
-        }, 5000);
-      })
-      .catch(function () {
-        statusDiv.textContent = "SYSTEM STATUS UNKNOWN";
-        statusDiv.style.display = "block";
-        window.setTimeout(function () {
-          statusDiv.style.display = "none";
-        }, 5000);
-      });
   });
 })();
 `;

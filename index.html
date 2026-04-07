@@ -391,22 +391,6 @@
         </div>
       </div>
     </div>
-    <script>
-    (function() {
-      fetch('/api/stats')
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(d) {
-          if (!d || !d.stats || d.stats.length === 0) return;
-          var grid = document.getElementById('statsGrid');
-          if (!grid) return;
-          grid.innerHTML = d.stats.map(function(s) {
-            return '<div class="stat"><div class="stat__number">' + s.value + '</div><div class="stat__label">' + s.label + '</div></div>';
-          }).join('');
-        })
-        .catch(function() { /* keep static fallback */ });
-    })();
-    </script>
-
     <!-- ─── POPULAR PRODUCTS ───────────────────────────── -->
     <section aria-labelledby="products-title">
       <div class="container">
