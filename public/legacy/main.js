@@ -38,6 +38,77 @@
   });
 
   /* ──────────────────────────────────────────────────────────
+     Home page stats loader
+  ────────────────────────────────────────────────────────── */
+  (function statsGrid() {
+    const grid = $('#statsGrid');
+    if (!grid) return;
+
+    fetch('/api/stats')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!d || !Array.isArray(d.stats) || d.stats.length === 0) return;
+        grid.innerHTML = d.stats
+          .map(
+            s =>
+              '<div class="stat"><div class="stat__number">' +
+              s.value +
+              '</div><div class="stat__label">' +
+              s.label +
+              '</div></div>',
+          )
+          .join('');
+      })
+      .catch(() => {
+        // Keep the static fallback values if the request fails.
+      });
+  })();
+
+  /* ──────────────────────────────────────────────────────────
+     Newsletter signup
+  ────────────────────────────────────────────────────────── */
+  (function newsletterSignup() {
+    const form = $('#newsletterForm');
+    if (!form) return;
+
+    on(form, 'submit', e => {
+      e.preventDefault();
+
+      const emailInput = $('#nlEmail');
+      const msg = $('#nlMsg');
+      const btn = form.querySelector('button[type=submit]');
+
+      if (!emailInput || !msg || !btn) return;
+
+      const email = emailInput.value.trim();
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'footer' }),
+      })
+        .then(r => r.json())
+        .then(d => {
+          msg.textContent = d.success ? d.message : d.error || 'Error. Try again.';
+          msg.style.color = d.success ? '#7fc97f' : '#e88';
+          if (d.success) form.reset();
+        })
+        .catch(() => {
+          msg.textContent = 'Network error. Try again.';
+          msg.style.color = '#e88';
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = 'Subscribe';
+        });
+    });
+  })();
+
+  /* ──────────────────────────────────────────────────────────
      Lazy images (native + manual fallback)
   ────────────────────────────────────────────────────────── */
   $$('img:not([loading])').forEach(img => img.setAttribute('loading', 'lazy'));
